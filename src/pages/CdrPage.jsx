@@ -23,21 +23,19 @@ export default function CdrPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    apiGet('/customers').then(setCustomers).catch(() => {});
-    apiGet('/hangup-causes').then(setCauses).catch(() => {});
-  }, []);
-
   const load = useCallback(() => {
     setLoading(true);
     setError('');
+    // Danh sách KH / hangup cause: tải lại nếu lần trước backend chưa sẵn sàng
+    if (customers.length === 0) apiGet('/customers').then(setCustomers).catch(() => {});
+    if (causes.length === 0) apiGet('/hangup-causes').then(setCauses).catch(() => {});
     apiGet('/cdr', {
       ...applied, from: fromLocalInput(applied.from), to: fromLocalInput(applied.to), page, page_size: pageSize,
     })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [applied, page, pageSize]);
+  }, [applied, page, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
 

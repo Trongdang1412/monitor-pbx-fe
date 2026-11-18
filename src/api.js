@@ -8,15 +8,24 @@ export async function apiGet(path, params = {}) {
     if (v !== '' && v !== null && v !== undefined) qs.append(k, v);
   }
   const url = `${BASE}/api${path}${qs.toString() ? `?${qs}` : ''}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try {
-      msg = (await res.json()).error || msg;
-    } catch {}
-    throw new Error(msg);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error('Không kết nối được backend');
   }
-  return res.json();
+  // 502/503/504: backend hoặc database chưa sẵn sàng -> giao diện vẫn hiển thị, chỉ báo không có dữ liệu
+  if ([502, 503, 504].includes(res.status)) {
+    throw new Error(`Backend chưa sẵn sàng (HTTP ${res.status}), đang thử lại...`);
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error(`Phản hồi không hợp lệ từ backend (HTTP ${res.status})`);
+  }
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+  return body;
 }
 
 // ---- định dạng ----

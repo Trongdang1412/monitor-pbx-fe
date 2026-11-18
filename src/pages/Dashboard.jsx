@@ -48,17 +48,17 @@ export default function Dashboard() {
   const [history, setHistory] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    apiGet('/customers').then(setCustomers).catch((e) => setError(e.message));
-  }, []);
-
-  // CCU + summary hôm nay: tự làm mới mỗi 5 giây
+  // CCU + summary hôm nay: tự làm mới mỗi 5 giây.
+  // Nếu backend chưa sẵn sàng thì chỉ hiện thông báo, lần làm mới sau sẽ tự thử lại.
   const loadLive = useCallback(() => {
-    apiGet('/ccu').then(setCcu).catch((e) => setError(e.message));
+    if (customers.length === 0) apiGet('/customers').then(setCustomers).catch(() => {});
+    apiGet('/ccu')
+      .then((d) => { setCcu(d); setError(''); })
+      .catch((e) => setError(e.message));
     apiGet('/summary', {
       from: startOfToday().toISOString(), to: new Date().toISOString(), customer_id: customerId,
     }).then((d) => setToday(d.summary)).catch((e) => setError(e.message));
-  }, [customerId]);
+  }, [customerId, customers.length]);
 
   useEffect(() => {
     loadLive();
@@ -73,6 +73,8 @@ export default function Dashboard() {
   }, [range, customerId]);
 
   useEffect(() => { loadRange(); }, [loadRange]);
+  // Backend vừa sẵn sàng trở lại (hết lỗi) mà chưa có dữ liệu khoảng thời gian -> tải lại
+  useEffect(() => { if (!error && !rangeData) loadRange(); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyPreset = (hours) => {
     const to = new Date();
